@@ -380,7 +380,12 @@ class ParamTestRunner {
             if (!StringUtils.contains(entry.getKey(), ".")) {
                 setGenerateParamByKey(entry.getKey(), entry.getValue());
                 continue;
-            }
+            }/* else if (StringUtils.contains(entry.getKey(), ".") 
+            		&& StringUtils.contains(entry.getKey(), "[")
+            		&& StringUtils.contains(entry.getKey(), "]")) {
+            	setGenerateParamByKeyComplex(entry.getKey(), entry.getValue());
+            	continue;
+            }*/
             Object param = getGenerateParamByKey(entry.getKey());
             String paramArgKey = StringUtils.substringAfter(entry.getKey(), ".");
             String value = null;
@@ -456,17 +461,34 @@ class ParamTestRunner {
     }
 
     private Object getGenerateParamByKey(String key) throws Exception{
-        if (StringUtils.contains(key, "[") && StringUtils.contains(key, "]")) {
-            String paramArgIndex = StringUtils.substringBetween(key, "[", "]");
-            return paramObjList.get(Integer.valueOf(paramArgIndex));
-        } else {
-            for (int i = 0; i < paramNameList.size(); i++) {
+    	String paramObjName = StringUtils.substringBefore(key, "[");
+    	
+    	if (!StringUtils.contains(paramObjName, ".")) {
+    		if (StringUtils.startsWith(key, "[")) {
+		        if (StringUtils.contains(key, "[") && StringUtils.contains(key, "]")) {
+		//        	String param
+		        	
+		            String paramArgIndex = StringUtils.substringBetween(key, "[", "]");
+		            return paramObjList.get(Integer.valueOf(paramArgIndex));
+		        }
+    		} else {
+    			int index = Integer.valueOf(StringUtils.substringBetween(key, "[", "]"));
+    			
+    			for (int i = 0; i < paramNameList.size(); i++) {
+	                String paramName = StringUtils.substringBetween(paramNameList.get(i), "_{", "}");
+	                if (StringUtils.equals(paramName, StringUtils.substringBefore(key, "["))) {
+	                    return ((List<?>)paramObjList.get(i)).get(index);
+	                }
+	            }
+    		}
+    	} else {
+    		for (int i = 0; i < paramNameList.size(); i++) {
                 String paramName = StringUtils.substringBetween(paramNameList.get(i), "_{", "}");
                 if (StringUtils.equals(paramName, StringUtils.substringBefore(key, "."))) {
                     return paramObjList.get(i);
                 }
             }
-        }
+    	}
         throw new Exception("无法识别参数key, 请配置并遵循org.apache.commons.BeanUtils取值key规则");
     }
 
@@ -480,9 +502,21 @@ class ParamTestRunner {
         }
 
         if (StringUtils.contains(key, "[") && StringUtils.contains(key, "]")) {
-            String paramArgIndex = StringUtils.substringBetween(key, "[", "]");
-            paramObjList.set(Integer.valueOf(paramArgIndex), value);
-            return;
+        	if (StringUtils.startsWith(key, "[")) {
+	            String paramArgIndex = StringUtils.substringBetween(key, "[", "]");
+	            paramObjList.set(Integer.valueOf(paramArgIndex), value);
+	            return;
+        	} else {
+        		int index = Integer.valueOf(StringUtils.substringBetween(key, "[", "]"));
+    			
+    			for (int i = 0; i < paramNameList.size(); i++) {
+	                String paramName = StringUtils.substringBetween(paramNameList.get(i), "_{", "}");
+	                if (StringUtils.equals(paramName, StringUtils.substringBefore(key, "["))) {
+	                    ((List<Object>)paramObjList.get(i)).set(index, value);
+	                    return;
+	                }
+	            }
+        	}
         } else {
             for (int i = 0; i < paramNameList.size(); i++) {
                 String paramName = StringUtils.substringBetween(paramNameList.get(i), "_{", "}");
